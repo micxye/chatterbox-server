@@ -13,7 +13,7 @@ this file and include it in basic-server.js so that it actually works.
 **************************************************************/
 var url = require('url');
 var route = '/classes/messages';
-var body = {results: []};
+var responseBody = {results: [{username: 'jeff', roomname: 'test', text: 'youre bad'}]};
 
 var requestHandler = function(request, response) {
   // Request and Response come from node's http module.
@@ -41,7 +41,7 @@ var requestHandler = function(request, response) {
   //
   // You will need to change this if you are sending something
   // other than plain text, like JSON or HTML.
-  headers['Content-Type'] = 'text/plain';
+  headers['Content-Type'] = 'application/json';
 
   // .writeHead() writes to the request line and headers of the response,
   // which includes the status and all headers.
@@ -49,20 +49,30 @@ var requestHandler = function(request, response) {
   
   if (requestPathname !== route) {
     statusCode = 404;
-  } else if (requestPathname === route && request.method === 'POST') {
-    statusCode = 201;
-    var temp = [];
-    request.on('data', chunk => {
-      temp.push(chunk);
-    }).on('end', () => {
-      temp = Buffer.concat(temp).toString();
-      body.results.push(JSON.parse(temp));
+    request.on('error', (err) => {
+      console.error(err);
     });
-  } else if (requestPathname === route && request.method === 'GET') {
-
+  } else if (request.method === 'OPTIONS') {
+    
+  } else if (request.method === 'POST') {
+    statusCode = 201;
+    var postData = [];
+    request.on('data', chunk => {
+      postData.push(chunk);
+    }).on('end', () => {
+      
+      postData = JSON.parse(postData);
+      
+      postData.createdAt = new Date();
+      postData.objectId = responseBody.results.length;
+      
+      responseBody.results.push(postData);
+      console.log(typeof postData);
+    });
   }
+  
   response.writeHead(statusCode, headers);
-  response.end(JSON.stringify(body));
+  response.end(JSON.stringify(responseBody));
 
   // Make sure to always call response.end() - Node may not send
   // anything back to the client until you do. The string you pass to
@@ -85,7 +95,7 @@ var requestHandler = function(request, response) {
 var defaultCorsHeaders = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'access-control-allow-headers': 'content-type, accept',
+  'access-control-allow-headers': 'content-type, accept, X-Parse-Application-Id, X-Parse-REST-API-Key',
   'access-control-max-age': 10 // Seconds.
 };
 
