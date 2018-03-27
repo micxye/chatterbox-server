@@ -31,7 +31,6 @@ var requestHandler = function(request, response) {
   // debugging help, but you should always be careful about leaving stray
   // console.logs in your code.
   console.log('Serving request type ' + request.method + ' for url ' + request.url);
-
   // The outgoing status.
   var statusCode = 200;
 
@@ -46,18 +45,20 @@ var requestHandler = function(request, response) {
 
   // .writeHead() writes to the request line and headers of the response,
   // which includes the status and all headers.
+  var requestPathname = url.parse(request.url).pathname;
   
-  if (request.url !== route) {
-    
-  } else if (request.url === route && request.method === 'POST') {
-    var newEntry = [];
-    response.on('data', function(data) {
-      
-    })
-    
-    body.push(JSON.parse(request.data));
+  if (requestPathname !== route) {
+    statusCode = 404;
+  } else if (requestPathname === route && request.method === 'POST') {
     statusCode = 201;
-  } else if (request.url === route && request.method === 'GET') {
+    var temp = [];
+    request.on('data', chunk => {
+      temp.push(chunk);
+    }).on('end', () => {
+      temp = Buffer.concat(temp).toString();
+      body.results.push(JSON.parse(temp));
+    });
+  } else if (requestPathname === route && request.method === 'GET') {
 
   }
   response.writeHead(statusCode, headers);
